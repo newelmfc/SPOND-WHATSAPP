@@ -71,21 +71,17 @@ def normalise_e164(num: str) -> str:
     return num if num.startswith("+") else f"+{num}"
 
 
-@app.get("/whatsapp/webhook")
-async def verify(mode: Optional[str] = None, hub_challenge: Optional[str] = None, hub_verify_token: Optional[str] = None, token: Optional[str] = None, challenge: Optional[str] = None):
-    """Verify endpoint for WhatsApp webhook subscription.
+from fastapi import Query
 
-    When setting up the webhook in the Meta Developer portal you supply
-    a callback URL and a ``VERIFY_TOKEN``. Meta makes a GET request to
-    your callback with ``hub.verify_token`` and ``hub.challenge``. If
-    the token matches your configured one, you must echo the challenge
-    back.
-    """
-    vt = hub_verify_token or token
-    ch = hub_challenge or challenge
-    if vt != VERIFY_TOKEN:
-        return PlainTextResponse("forbidden", status_code=403)
-    return PlainTextResponse(ch or "OK")
+@app.get("/whatsapp/webhook")
+async def verify(
+    hub_mode: str | None = Query(None, alias="hub.mode"),
+    hub_challenge: str | None = Query(None, alias="hub.challenge"),
+    hub_verify_token: str | None = Query(None, alias="hub.verify_token"),
+):
+    if hub_mode == "subscribe" and hub_verify_token == VERIFY_TOKEN:
+        return PlainTextResponse(hub_challenge or "OK")
+    return PlainTextResponse("forbidden", status_code=403)
 
 
 @app.post("/whatsapp/webhook")
